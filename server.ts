@@ -65,7 +65,7 @@ app.use(express.json({ limit: "50mb" }));
       parts[parts.length - 1] += `\n\nAdditional Requirements:\n1. Compare the provided resume against the job description. List any critical skills, tools, or qualifications mentioned in the job description that are either absent or underdeveloped in the resume as "criticalGaps". Suggest how these gaps could be addressed, such as through further training or specific project experience as "recommendations".\n2. Identify key skills, qualifications, and experiences mentioned in the job description that are present in the resume. Suggest specific keywords and phrases from the job description that can be strategically integrated into the resume to enhance its ATS compatibility as "suggestedKeywords". Provide a revised section or bullet points with these optimizations as "revisedBullets".\n3. Act as a supportive career mentor. Write a direct, personalized message to the candidate explaining specifically why their background makes them a good fit for this role, providing encouragement and strategic advice on how to position themselves as "mentorExplanation".`;
 
       const response = await generateWithRetry(ai, {
-        model: "gemini-2.5-flash",
+        model: "gemini-3.5-flash",
         contents: parts,
         config: {
           responseMimeType: "application/json",
@@ -164,7 +164,7 @@ Output ONLY valid JSON matching the schema below. ${extraInfo}`;
       }
 
       const response = await generateWithRetry(ai, {
-        model: "gemini-2.5-flash",
+        model: "gemini-3.5-flash",
         contents: parts,
         config: {
           responseMimeType: "application/json",
@@ -251,7 +251,7 @@ Output ONLY valid JSON matching the schema below. ${extraInfo}`;
         // @ts-ignore
         const distPath = path.join(process.cwd(), "dist");
         app.use(express.static(distPath));
-        app.get("*all", (req, res) => {
+        app.get("*", (req, res) => {
           res.sendFile(path.join(distPath, "index.html"));
         });
       }
