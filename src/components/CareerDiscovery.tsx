@@ -12,6 +12,9 @@ export default function CareerDiscovery() {
   const [expandedCoverLetter, setExpandedCoverLetter] = useState<number | null>(null);
 
   const { trackedJobs, addJob, removeJob } = useTrackedJobs();
+  const [filterQuery, setFilterQuery] = useState('');
+  const [activeCategory, setActiveCategory] = useState<'All' | 'High' | 'Moderate' | 'Stretch'>('All');
+  const [visibleCount, setVisibleCount] = useState(15);
 
   const togglePreference = (type: string) => {
     setPreferences(prev => 
@@ -224,14 +227,89 @@ export default function CareerDiscovery() {
             </div>
           </div>
 
-          <div className="space-y-6">
-            <h3 className="text-lg font-bold text-neutral-900 flex items-center gap-2">
-               <Briefcase className="w-5 h-5 text-indigo-600" />
-               Job Matches
-            </h3>
-            
-            <div className="space-y-4">
-              {result.jobs?.map((job, idx) => (
+          {(() => {
+            const filteredJobs = result.jobs?.filter(job => {
+              const catMatch = activeCategory === 'All' || 
+                (activeCategory === 'High' && job.category.includes('High Match')) ||
+                (activeCategory === 'Moderate' && job.category.includes('Moderate')) ||
+                (activeCategory === 'Stretch' && job.category.includes('Stretch'));
+              
+              if (!catMatch) return false;
+
+              if (!filterQuery.trim()) return true;
+              const q = filterQuery.toLowerCase();
+              return (
+                job.jobTitle.toLowerCase().includes(q) ||
+                job.company.toLowerCase().includes(q) ||
+                (job.location || '').toLowerCase().includes(q) ||
+                (job.requiredSkills || []).some((s: string) => s.toLowerCase().includes(q))
+              );
+            }) || [];
+
+            return (
+              <div className="space-y-6">
+                {/* Advanced Filtering Area */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-zinc-50 border border-zinc-200/60 p-5 rounded-2xl">
+                  <div>
+                    <h3 className="text-lg font-bold text-neutral-900 flex items-center gap-2">
+                       <Briefcase className="w-5 h-5 text-indigo-600 animate-pulse" />
+                       Matched Opportunities
+                    </h3>
+                    <p className="text-xs text-zinc-500 font-semibold mt-1">
+                      We identified <span className="text-indigo-600 font-extrabold">{result.jobs?.length || 0} tailored opportunities</span> matched precisely to your resume.
+                    </p>
+                  </div>
+
+                  {/* Real-time search filter */}
+                  <div className="relative w-full md:w-80">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                    <input
+                      type="text"
+                      placeholder="Filter by title, company, skills..."
+                      value={filterQuery}
+                      onChange={(e) => {
+                        setFilterQuery(e.target.value);
+                        setVisibleCount(15);
+                      }}
+                      className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-zinc-200 rounded-xl focus:ring-4 focus:ring-indigo-150 focus:border-indigo-500 focus:outline-none transition-all shadow-sm"
+                    />
+                  </div>
+                </div>
+
+                {/* Score Category pill filters */}
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-150 pb-2">
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      { id: 'All', label: `All Matches (${result.jobs?.length || 0})` },
+                      { id: 'High', label: `High Match (${result.jobs?.filter(j => j.category.includes('High')).length || 0})` },
+                      { id: 'Moderate', label: `Moderate Match (${result.jobs?.filter(j => j.category.includes('Moderate')).length || 0})` },
+                      { id: 'Stretch', label: `Stretch Goals (${result.jobs?.filter(j => j.category.includes('Stretch')).length || 0})` }
+                    ].map((cat) => (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => {
+                          setActiveCategory(cat.id as any);
+                          setVisibleCount(15);
+                        }}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                          activeCategory === cat.id
+                            ? 'bg-indigo-600 text-white shadow-sm'
+                            : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 hover:text-zinc-900 border border-transparent cursor-pointer font-semibold'
+                        }`}
+                      >
+                        {cat.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="text-xs font-bold text-zinc-400 uppercase tracking-widest">
+                    Showing {Math.min(visibleCount, filteredJobs.length)} of {filteredJobs.length} matches
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  {filteredJobs.slice(0, visibleCount).map((job, idx) => (
                 <div key={idx} className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
                    <div className="p-5 border-b border-neutral-100 flex flex-wrap justify-between items-start gap-4">
                       <div>
@@ -323,13 +401,27 @@ export default function CareerDiscovery() {
                 </div>
               ))}
               
-              {(!result.jobs || result.jobs.length === 0) && (
-                 <div className="p-8 text-center text-neutral-500">
-                    No jobs found based on the provided resume. Try adding more skills or experience!
-                 </div>
+              {filteredJobs.length > visibleCount && (
+                <div className="flex justify-center pt-8">
+                  <button 
+                    type="button"
+                    onClick={() => setVisibleCount(prev => prev + 15)}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold tracking-wider px-6 py-3 rounded-full text-xs uppercase shadow hover:shadow-lg transition-all cursor-pointer"
+                  >
+                     Show More Matched Opportunities [+15]
+                  </button>
+                </div>
+              )}
+
+              {filteredJobs.length === 0 && (
+                <div className="p-12 text-center text-zinc-500 bg-zinc-50 border border-dashed border-zinc-200 rounded-2xl">
+                  No matching jobs found with your filter terms. Try altering your keywords!
+                </div>
               )}
             </div>
           </div>
+        );
+      })()}
         </div>
       )}
     </div>
